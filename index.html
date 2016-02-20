@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html >
+  <head>
+    <meta charset="UTF-8">
+    <title>sandbox</title>
+    
+    
+    
+    
+        <link rel="stylesheet" href="css/style.css">
+
+    
+    
+    
+  </head>
+
+  <body>
+
+    <div id="right">
+  <p>particle color
+    <input id="particlecolor" type="color" align="right" name="favcolor" value="#ffffff">
+  </p>
+  <p>quick ground sort
+    <input type="checkbox" id="calc" name="calc" value=true checked align="right">
+  </p>
+  <p>
+    <button type="button" id="clear" align="right">clear</button>
+  </p>
+</div>
+
+<p id="sizeoutput">average particle size </p>
+<input type="range" id="size" name="a" value="50">
+<p id="gravoutput">gravity</p>
+<input type="range" id="grav" name="a" value="25">
+<p id="steepnessoutput">steepness</p>
+<input type="range" id="steepness" name="a" value="0">
+<p id="xdiroutput">x-velocity</p>
+<input type="range" id="xdir" name="a" value="50">
+<p id="ydiroutput">y-velocity</p>
+<input type="range" id="ydir" name="a" value="50">
+
+<canvas id="myCanvas" style="position : fixed;"> </canvas>
+
+<body onload="draw()">
+    
+        <script src="js/index.js"></script>
+
+    
+    
+    
+  </body>
+</html>
