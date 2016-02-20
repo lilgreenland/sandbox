@@ -2,35 +2,20 @@ var canvas = document.getElementById("myCanvas");
 var ctx = canvas.getContext("2d");
 ctx.canvas.width = window.innerWidth;
 ctx.canvas.height = window.innerHeight;
+var addStar = 0;
 var container = {
   x: 0,
   y: 0,
   width: canvas.width,
   height: canvas.height
 };
-var gravity = 0.05;
-var starSize = 6;
-var spawnRate = 1 //new stars added each cycle
-var xSpawn = container.width * 0.5;
-var ySpawn = 0;
-var VxStart = 0;
-var VyStart = 0;
-var color = "black"
-var spread = 0.3;
-var fastCalc = 2;
-var steep = 1;
-var mouseDown = true;
 var stars = [];
-
-function pushStar() { //adds a new star objects to array stars
-  stars.push({
-    x: xSpawn + Math.random() * spread * 2 - 2,
-    y: ySpawn,
-    r: Math.round(starSize * Math.random()),
-    Vx: 2 * spread * (Math.random() - 0.5) + VxStart,
-    Vy: 2 * spread * (Math.random() - 0.5) + VyStart,
-  });
-}
+var totalStars = 0; // spawns stars at start
+var mousePos = {
+  x: container.width * 0.5,
+  y: container.height * 0.5
+};
+var friction = 0.996
 
 window.onresize = function(event) {
   ctx.canvas.width = window.innerWidth;
@@ -38,6 +23,31 @@ window.onresize = function(event) {
   container.height = window.innerHeight;
   container.width = window.innerWidth;
 };
+
+//adds a new star objects to array stars
+function pushStar() {
+  stars.push({
+    x: mousePos.x + 20 * (Math.random() - 0.5),
+    y: mousePos.y + 20 * (Math.random() - 0.5),
+    Vx: 0,
+    Vy: 0,
+    r: 35 * Math.random() + 3,
+    color: '#' + Math.floor(Math.random() * 16777216).toString(16)
+  });
+}
+//spawns stars
+for (var i = 0; i < totalStars; i++) {
+  pushStar();
+}
+//push away if mouse down
+document.addEventListener("mousedown", function() {
+  addStar = 1;
+  for (var i = 0; i < stars.length; i++) {
+    stars[i].Vx += 3 * Math.cos(Math.atan2(stars[i].y - mousePos.y, stars[i].x - mousePos.x));
+    stars[i].Vy += 3 * Math.sin(Math.atan2(stars[i].y - mousePos.y, stars[i].x - mousePos.x));
+  }
+});
+
 //gets mouse position
 function getMousePos(canvas, evt) {
   var rect = canvas.getBoundingClientRect();
@@ -46,148 +56,57 @@ function getMousePos(canvas, evt) {
     y: evt.clientY - rect.top
   };
 }
-// waits for mousemove event
+// waits for mouse move and then updates position
 document.addEventListener('mousemove', function(evt) {
   mousePos = getMousePos(canvas, evt);
-  xSpawn = mousePos.x
-  ySpawn = mousePos.y
 }, false);
 
-//populate array ground to width of screen
-var ground = [];
-for (var i = 0; i < container.width; i++) {
-  ground.push(0);
-}
-
-//main loop
 //recursive draw function
 function draw() {
-  if (mouseDown) { //makes the setting sliders respond while mouse is down
-    updateOutPut()
-  }
-  //screen wipe
-  ctx.fillStyle = "black";
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = "#ffffff"; //background color
   ctx.fillRect(container.x, container.y, container.width, container.height);
-   
-  //ctx.fillText(mouseDown,200,100);  //variable feedback for testing
-  ctx.fillStyle = color;
-  //add sand 
-  pushStar();
-  i = stars.length;
-  while (i--) {
-    //draw a pixel
-    ctx.fillRect(stars[i].x, stars[i].y, stars[i].r, stars[i].r);
-    //gravity
-    stars[i].Vy += gravity;
+  for (var i = 0; i < stars.length; i++) {
+    //draw a circle
+    ctx.globalCompositeOperation = 'darker';
+    ctx.beginPath();
+    ctx.arc(stars[i].x, stars[i].y, stars[i].r, 0, 2 * Math.PI, true);
+    ctx.fillStyle = stars[i].color;
+    ctx.fill();
+    //bounce off walls
+    if (stars[i].x > container.width - stars[i].r) {
+      stars[i].Vx *= -friction;
+      stars[i].x = container.width - stars[i].r;
+    } else if (stars[i].x < stars[i].r) {
+      stars[i].Vx *= -friction;
+      stars[i].x = stars[i].r;
+    }
+    if (stars[i].y > container.height - stars[i].r) {
+      stars[i].Vy *= -friction;
+      stars[i].y = container.height - stars[i].r;
+    } else if (stars[i].y < stars[i].r) {
+      stars[i].Vy *= -friction;
+      stars[i].y = stars[i].r;
+    }
+    // attraction to the mouse
+    stars[i].Vx += -0.03 * Math.cos(Math.atan2(stars[i].y - mousePos.y, stars[i].x - mousePos.x));
+    stars[i].Vy += -0.03 * Math.sin(Math.atan2(stars[i].y - mousePos.y, stars[i].x - mousePos.x));
 
     //change position, velocity, size of object elements for each location in array
     stars[i].x += stars[i].Vx;
     stars[i].y += stars[i].Vy;
 
-    //wall collision
-    if (stars[i].x > container.width) {
-      stars[i].x = container.width;
-      stars[i].Vx = -1 * Math.abs(stars[i].Vx);
-    } else if (stars[i].x < 0) {
-      stars[i].x = 0;
-      stars[i].Vx = Math.abs(stars[i].Vx);
-    }
-    if (stars[i].y > container.height - ground[Math.round(stars[i].x)]) {
-      //add to ground, subtract from pixels
-      for (var j = 0; j < stars[i].r; j++) {
-        ground[Math.round(stars[i].x + j)] = ground[Math.round(stars[i].x + j)] + stars[i].r
-      }
-      stars.splice(i, 1);
-    } else if (stars[i].y < 0) {
-      stars[i].y = 0;
-      stars[i].Vy = Math.abs(stars[i].Vy);
-    } else if (stars[i].y > container.height) {
-      stars.splice(i, 1);
-    }
+    //friction slows velocity
+    stars[i].Vx *= friction;
+    stars[i].Vy *= friction;
+
   }
-  //ground loop
-  for (var i = 0; i < container.width; i++) {
-    //draw ground
-    ctx.fillRect(i, container.height - ground[i], 1, ground[i]);
-    //randomly check left and right to see if the array location is taller, if it is move one to left or right.
-    if (Math.random() > 0.5) {
-      if (ground[i] - steep > ground[i - 1]) {
-        ground[i - 1] = ground[i - 1] + 1;
-        ground[i] = ground[i] - 1;
-        i -= fastCalc;
-      } else if (ground[i] - steep > ground[i + 1]) {
-        ground[i + 1] = ground[i + 1] + 1;
-        ground[i] = ground[i] - 1;
-        i -= fastCalc;
-      };
-    } else {
-      if (ground[i] - steep > ground[i + 1]) {
-        ground[i + 1] = ground[i + 1] + 1;
-        ground[i] = ground[i] - 1;
-        i -= fastCalc;
-      } else if (ground[i] - steep > ground[i - 1]) {
-        ground[i - 1] = ground[i - 1] + 1;
-        ground[i] = ground[i] - 1;
-        i -= fastCalc;
-      };
-    }
+  if (addStar == 1) {
+    pushStar();
+    addStar = 0;
+  }else if (addStar == -1){
+    stars = [];
   }
   requestAnimationFrame(draw);
 }
-
-document.getElementById('particlecolor').onchange = function() {
-  color = particlecolor.value;
-}
-document.getElementById('clear').onclick = function() {
-  //populate array ground to width of screen
-  ground = [];
-  for (var i = 0; i < container.width; i++) {
-    ground.push(0);
-  }
-}
-document.getElementById('calc').onchange = function() {
-  if (calc.checked == true) {
-    fastCalc = 2
-  } else {
-    fastCalc = 1
-  }
-}
-document.addEventListener("mousedown", function() {
-  mouseDown = true;
-  for (var i = 0; i < stars.length; i++) {
-    stars[i].Vx += 3 * Math.cos(Math.atan2(stars[i].y - mousePos.y, stars[i].x - mousePos.x));
-    stars[i].Vy += 3 * Math.sin(Math.atan2(stars[i].y - mousePos.y, stars[i].x - mousePos.x));
-  }
-});
-document.addEventListener("mouseup", function() {
-  mouseDown = false;
-});
-document.getElementById('size').onchange = function() {
-  updateOutPut()
-}
-document.getElementById('grav').onchange = function() {
-  updateOutPut()
-}
-document.getElementById('steepness').onchange = function() {
-  updateOutPut()
-}
-document.getElementById('xdir').onchange = function() {
-  updateOutPut()
-}
-document.getElementById('ydir').onchange = function() {
-  updateOutPut()
-}
-
-function updateOutPut() {
-  starSize = Math.ceil(size.value * 0.1);
-  document.getElementById("sizeoutput").innerHTML = "max size = " + starSize.toFixed(0) + " x " + starSize.toFixed(0);
-  gravity = grav.value * 0.002;
-  document.getElementById("gravoutput").innerHTML = "gravity = " + gravity.toFixed(3);
-  VxStart = (xdir.value - 50) * 0.2;
-  document.getElementById("xdiroutput").innerHTML = "x-velocity = " + VxStart.toFixed(1);
-  VyStart = (ydir.value - 50) * 0.2;
-  document.getElementById("ydiroutput").innerHTML = "y-velocity = " + VyStart.toFixed(1);
-  steep = 1 + Math.floor(steepness.value * 0.1);
-  document.getElementById("steepnessoutput").innerHTML = "steepness = " + steep.toFixed(0);
-  color = particlecolor.value;
-}
+requestAnimationFrame(draw);
